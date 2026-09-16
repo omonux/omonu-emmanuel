@@ -26,7 +26,14 @@ Open `http://localhost:4000`.
 Set `OPENAI_API_KEY` and/or `GEMINI_API_KEY` in `.env`, or connect provider keys from OMONUX Settings. **Never commit `.env`.**
 
 ## Live trading
-Live trading requires all of: server live flag, supported exchange credentials, Live mode, explicit arming phrase, and passing risk gates. OMONUX is spot-only in this version: live entries are BUY orders; SELL orders close owned spot inventory.
+Live trading requires all of:
+1. `LIVE_TRADING_ENABLED=true` on the server.
+2. A supported exchange credential connected.
+3. AutoTrade mode set to Live.
+4. The exact confirmation phrase entered to arm the account.
+5. Risk gates still passing every cycle.
+
+OMONUX is spot-only in this version: live entries are BUY orders; SELL orders are used to close owned spot inventory.
 
 ## Tests
 ```bash
