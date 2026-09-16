@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OMONUX — Auto Trade</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.card{padding:18px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{padding:16px;border:1px solid var(--stroke);border-radius:14px;background:var(--card-soft)}.kpi b{display:block;color:var(--muted);font-size:12px}.kpi span{display:block;font-size:22px;font-weight:900;margin-top:5px}.dangerbox{border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);padding:14px;border-radius:14px}.successbox{border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.08);padding:14px;border-radius:14px}.field{margin:10px 0}.field label{display:block;font-weight:800;font-size:12px;margin-bottom:6px}.field input,.field select{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid var(--stroke);background:rgba(31,41,55,.7);color:var(--text)}.actions{display:flex;gap:8px;flex-wrap:wrap}.event{padding:10px 12px;border-bottom:1px solid var(--stroke);font-size:13px}.muted{color:var(--muted)}@media(max-width:900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body data-protect="1">
+<div class="topbar"><div class="topinner">
+  <a class="brand" data-go="index.html"><img src="logo.svg" alt="OMONUX" class="logo-mark"/><span class="brand-text"><b>OMONUX</b> <small>PRO</small></span></a>
+  <div class="navlinks"><a href="dashboard.html">Dashboard</a><a href="signals.html">Signals</a><a href="paper.html">Paper Trading</a><a href="auto-trade.html" class="active">Auto Trade</a><a href="settings.html">Settings</a></div>
+  <div class="navbtns"><span id="userName" class="pill">Trader</span><button class="btn danger" id="logoutBtn">Log out</button></div>
+</div></div>
+<div class="wrap2">
+  <div class="kicker"><b>Auto Trade</b> — SmartAI evaluates <b>closed 30-minute candles</b>; execution/risk controls remain paper-first.</div>
+  <div id="message" style="display:none;margin:12px 0"></div>
+  <div class="kpis" style="margin:14px 0"><div class="kpi"><b>Engine</b><span id="engine">—</span></div><div class="kpi"><b>Mode</b><span id="mode">—</span></div><div class="kpi"><b>Open Positions</b><span id="open">—</span></div><div class="kpi"><b>Last Cycle</b><span id="last">—</span></div></div>
+  <div class="grid">
+    <section class="card">
+      <h2>Trading Controls</h2>
+      <div class="field"><label>Mode</label><select id="modeSelect"><option value="paper">Paper — no real money</option><option value="live">Live — real exchange</option></select></div>
+      <div class="field"><label>Risk per trade (%)</label><input id="risk" type="number" min="0.1" max="5" step="0.1" value="1"/></div>
+      <div class="field"><label>Minimum signal confidence</label><input id="confidence" type="number" min="1" max="100" step="1" value="60"/></div>
+      <div class="field"><label>Maximum open positions</label><input id="maxOpen" type="number" min="1" max="20" step="1" value="3"/></div>
+      <div class="field"><label>Maximum daily loss (%)</label><input id="dailyLoss" type="number" min="0.1" max="100" step="0.1" value="5"/></div>
+      <div class="field"><label>Cooldown after a closed trade (minutes)</label><input id="cooldown" type="number" min="0" max="1440" step="1" value="15"/></div>
+      <div class="field"><label>Maximum trades per day</label><input id="maxTrades" type="number" min="1" max="100" step="1" value="10"/></div>
+      <div class="field"><label>Maximum notional (%)</label><input id="maxNotional" type="number" min="1" max="100" step="1" value="25"/></div>
+      <div class="actions"><button class="btn primary" id="save">Save configuration</button><button class="btn" id="run">Run one cycle</button><button class="btn danger" id="stop">Stop Auto Trade</button><button class="btn" id="start">Start Auto Trade</button></div>
+    </section>
+    <section class="card">
+      <h2>Live Trading Safety Gate</h2>
+      <div class="dangerbox"><b>Live trading is off by default.</b><p class="muted">The server must explicitly enable live trading, the account must be switched to Live, exchange credentials must be connected, and this account must be armed with the exact confirmation phrase.</p></div>
+      <div class="field"><label>Live confirmation phrase</label><input id="confirm" type="text" autocomplete="off" placeholder="I_UNDERSTAND_LIVE_TRADING"/></div>
+      <div class="actions"><button class="btn danger" id="arm">Arm Live Trading</button><button class="btn" id="disarm">Disarm Live</button></div>
+      <p class="muted" style="margin-top:12px">Current exchange adapters are spot-only, so live Auto Trade accepts BUY entries only. SELL signals remain valid for analysis and paper trading.</p>
+    </section>
+  </div>
+  <section class="card" style="margin-top:16px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Auto Trade Audit</h2><button class="btn" id="refresh">Refresh</button></div><div id="events" style="margin-top:8px"></div></section>
+</div>
+<script src="app.js"></script>
+<script>
+const $=id=>document.getElementById(id); function show(text,good=false){$('message').textContent=text;$('message').className=good?'successbox':'dangerbox';$('message').style.display='block';setTimeout(()=>{$('message').style.display='none'},5000)}
+async function refresh(){try{const s=await OmonuxAPI.autoStatus();$('engine').textContent=s.running?'RUNNING':'STOPPED'; $('engine').title=`Decision timeframe: ${s.settings.timeframe||'30m'}`;$('mode').textContent=s.settings.mode.toUpperCase()+(s.settings.liveArmed?' • ARMED':'');$('last').textContent=s.state.lastCycleAt?new Date(s.state.lastCycleAt).toLocaleTimeString():'—';$('modeSelect').value=s.settings.mode;['risk','confidence','maxOpen','dailyLoss','cooldown','maxTrades','maxNotional'].forEach((id)=>{const map={risk:'riskPercent',confidence:'minConfidence',maxOpen:'maxOpenPositions',dailyLoss:'maxDailyLossPercent',cooldown:'cooldownMinutes',maxTrades:'maxTradesPerDay',maxNotional:'maxNotionalPercent'}; if(s.settings[map[id]]!=null) $(id).value=s.settings[map[id]]}); const a=await OmonuxAPI.getAccount();$('open').textContent=a.positions.length; const e=await OmonuxAPI.autoEvents(); $('events').innerHTML=e.events.length?e.events.map(x=>`<div class="event"><b>${x.type}</b> <span class="muted">${new Date(x.at).toLocaleString()}</span><div>${x.symbol||''} ${x.error||x.reason||''}</div></div>`).join(''):'<div class="muted" style="padding:14px">No events yet.</div>'}catch(err){if(err.status===401){OmonuxAPI.clearSession();location.href='login.html'}else show(err.message)}}
+$('save').onclick=async()=>{try{await OmonuxAPI.autoConfig({mode:$('modeSelect').value,riskPercent:Number($('risk').value),minConfidence:Number($('confidence').value),maxOpenPositions:Number($('maxOpen').value),maxDailyLossPercent:Number($('dailyLoss').value),cooldownMinutes:Number($('cooldown').value),maxTradesPerDay:Number($('maxTrades').value),maxNotionalPercent:Number($('maxNotional').value)});show('Configuration saved.',true);refresh()}catch(e){show(e.message)}};
+$('start').onclick=async()=>{try{await OmonuxAPI.autoStart();show('Auto Trade started.',true);refresh()}catch(e){show(e.message)}};$('stop').onclick=async()=>{try{await OmonuxAPI.autoStop();show('Auto Trade stopped.',true);refresh()}};$('run').onclick=async()=>{try{const r=await OmonuxAPI.autoRunOnce();show(JSON.stringify(r.actions||r),true);refresh()}catch(e){show(e.message)}};$('arm').onclick=async()=>{try{await OmonuxAPI.autoArmLive($('confirm').value);show('Live trading armed. Verify exchange credentials and server safety settings before starting.',true);refresh()}catch(e){show(e.message)}};$('disarm').onclick=async()=>{try{await OmonuxAPI.autoDisarmLive();show('Live trading disarmed.',true);refresh()}catch(e){show(e.message)}};$('refresh').onclick=refresh;refresh();
+</script>
+</body></html>
